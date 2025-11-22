@@ -10,7 +10,7 @@ export default function AuthForm(){
   return (
     <div className="min-h-screen grid place-items-center">
       <div className="bg-white shadow-lg rounded-xl p-8 w-full max-w-md">
-        <h1 className="text-2xl font-bold mb-6 text-center">Solid Chat</h1>
+        <h1 className="text-2xl font-bold mb-6 text-center">Chatico</h1>
         <form onSubmit={submit} className="space-y-4">
           <input className="w-full border rounded-lg p-3" placeholder="Username" value={username} onChange={e=>setUsername(e.target.value)} required />
           {mode==='register' && <input className="w-full border rounded-lg p-3" type="email" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} required />}
