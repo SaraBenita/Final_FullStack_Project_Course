@@ -24,7 +24,6 @@ const io = new IOServer(httpServer, { cors: { origin: true, credentials: true } 
 io.use(authSocketMiddleware);
 io.on('connection', (socket) => registerSocketHandlers(io, socket));
 
-// attach io to req so routes can emit
 app.use((req, res, next) => { req.io = io; next(); });
 
 app.get('/', (req, res) => res.json({ status: 'ok' }));
@@ -33,14 +32,11 @@ app.use('/api/users', userRoutes);
 app.use('/api/conversations', convoRoutes);
 app.use('/api/messages', msgRoutes);
 
-// serve uploaded files (allow cross-origin embedding from the frontend origin)
 const uploadsPath = path.join(process.cwd(), 'server', 'uploads');
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 app.use('/uploads', (req, res, next) => {
-  // Allow the frontend dev origin to embed and fetch uploaded resources
   res.setHeader('Access-Control-Allow-Origin', CLIENT_ORIGIN);
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  // Permit embedding the resource cross-origin (otherwise CORP may block it)
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   next();
 }, express.static(uploadsPath));

@@ -1,4 +1,3 @@
-// client/src/components/GroupControls.jsx
 import React, { useState } from 'react';
 import useStore from '../store';
 import api from '../api';
@@ -27,7 +26,6 @@ export default function GroupControls() {
       return;
     }
 
-    // ✅ בדיקה בצד הקליינט: האם כבר קיימת קבוצה עם אותו שם?
     const existsLocally = conversations.some(
       (c) =>
         c.isGroup &&
@@ -46,11 +44,9 @@ export default function GroupControls() {
         name: trimmedName,
       });
 
-      // ריענון רשימת השיחות מהשרת (כמו שעשית קודם)
       const convos = await api.get('/api/conversations').then((r) => r.data);
       useStore.setState({ conversations: convos });
 
-      // לעבור ישר לקבוצה החדשה
       setActiveConversation(data._id);
 
       setSelected([]);
@@ -60,7 +56,6 @@ export default function GroupControls() {
       const status = e?.response?.status;
       const msg = e?.response?.data?.message;
 
-      // אם בעתיד השרת יחזיר reason/group_name_exists – נתפוס גם את זה
       if (reason === 'group_name_exists' || (status === 400 && msg)) {
         alert('שם הקבוצה כבר קיים. אנא בחרי שם אחר.');
       } else {
@@ -89,7 +84,6 @@ export default function GroupControls() {
 
     const trimmed = newName.trim();
 
-    // ✅ גם בשינוי שם נוודא בצד הקליינט שאין שם כפול עם קבוצה אחרת
     const existsLocally = conversations.some(
       (c) =>
         c.isGroup &&

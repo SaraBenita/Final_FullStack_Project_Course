@@ -82,7 +82,6 @@ function ImageWithFallback({ src, alt, className }) {
       const objUrl = URL.createObjectURL(blob);
       setCur(objUrl);
     } catch (e) {
-      // ignore fallback failure
     }
   };
 

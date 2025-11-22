@@ -6,7 +6,6 @@ import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
 
-// ensure uploads dir exists
 const uploadDir = path.join(process.cwd(), 'server', 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
@@ -21,7 +20,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { fileSize: 10 * 1024 * 1024 },
 });
 const router = Router();
 
@@ -51,7 +50,6 @@ router.post('/', authRequired, async (req, res) => {
   res.status(201).json(populated);
 });
 
-// upload file endpoint
 router.post('/upload', authRequired, upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
   const base = req.protocol + '://' + req.get('host');

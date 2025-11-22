@@ -3,7 +3,6 @@ const MessageSchema = new mongoose.Schema({
   conversation: { type: mongoose.Schema.Types.ObjectId, ref: 'Conversation', index: true, required: true },
   sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   body: { type: String },
-  // optional attachment object for files/images
   attachment: {
     url: { type: String },
     filename: { type: String },

@@ -15,7 +15,6 @@ const useStore = create((set, get) => ({
 
   setBanner: (banner) => set({ banner }),
 
-  // בחירת שיחה אקטיבית + טעינת ההודעות שלה
   setActiveConversation: async (id) => {
     const current = get().activeConversationId;
     const socket = connectSocket();
@@ -26,7 +25,6 @@ const useStore = create((set, get) => ({
 
     set({ activeConversationId: id, messages: [] });
 
-    // איפוס מונה ה-unread לשיחה זו
     set({
       unreadByConvo: {
         ...get().unreadByConvo,
@@ -64,7 +62,6 @@ const useStore = create((set, get) => ({
     }
   },
 
-  // אתחול האפליקציה
   boot: async () => {
     if (get()._booted) return;
     set({ _booted: true });
@@ -105,7 +102,6 @@ const useStore = create((set, get) => ({
 
     const socket = connectSocket();
 
-    // איפוס מאזינים ישנים
     socket.off('message:new');
     socket.off('typing');
     socket.off('messages:read');
@@ -116,16 +112,12 @@ const useStore = create((set, get) => ({
     socket.off('user:online');
     socket.off('user:offline');
 
-    // -----------------------------
-    //       message:new
-    // -----------------------------
+
     socket.on('message:new', (msg) => {
       const active = get().activeConversationId;
       console.log('[message:new] got msg', msg, 'active =', active);
 
-      // אם זו השיחה האקטיבית – מוסיפים או מחליפים הודעה אופטימית
       if (String(msg.conversation) === String(active)) {
-        // אם השרת החזיר tempId, החלף את ההודעה האופטימית המקומית
         if (msg._tempId) {
           const list = [...get().messages];
           const idx = list.findIndex((m) => m._id === msg._tempId);
@@ -144,7 +136,6 @@ const useStore = create((set, get) => ({
         }
       }
 
-      // עדכון רשימת השיחות (lastMessage + מיון למעלה)
       const list = get().conversations;
       const idx = list.findIndex(
         (c) => String(c._id) === String(msg.conversation)
@@ -163,9 +154,6 @@ const useStore = create((set, get) => ({
       }
     });
 
-    // -----------------------------
-    //         typing
-    // -----------------------------
     socket.on('typing', ({ userId, conversationId, isTyping }) => {
       if (conversationId !== get().activeConversationId) return;
       set((s) => ({
@@ -173,9 +161,7 @@ const useStore = create((set, get) => ({
       }));
     });
 
-    // -----------------------------
-    //       messages:read
-    // -----------------------------
+
     socket.on('messages:read', ({ conversationId, userId, messageIds }) => {
       if (conversationId !== get().activeConversationId) return;
 
@@ -191,9 +177,6 @@ const useStore = create((set, get) => ({
       });
     });
 
-    // -----------------------------
-    //       conversation:new
-    // -----------------------------
     socket.on('conversation:new', (convo) => {
       const exists = get().conversations.some((c) => c._id === convo._id);
       if (!exists) {
@@ -201,9 +184,7 @@ const useStore = create((set, get) => ({
       }
     });
 
-    // -----------------------------
-    //      conversation:update
-    // -----------------------------
+
     socket.on('conversation:update', ({ conversationId, lastMessage }) => {
       const list = get().conversations;
       const idx = list.findIndex(
@@ -225,7 +206,6 @@ const useStore = create((set, get) => ({
         );
         set({ conversations: updated });
 
-        // אם השיחה לא אקטיבית – להעלות מונה unread
         if (String(conversationId) !== String(get().activeConversationId)) {
           const unread = { ...get().unreadByConvo };
           unread[conversationId] = (unread[conversationId] || 0) + 1;
@@ -234,9 +214,7 @@ const useStore = create((set, get) => ({
       }
     });
 
-    // -----------------------------
-    //   conversation:updated (rename group)
-    // -----------------------------
+
     socket.on('conversation:updated', (convo) => {
       const updated = get().conversations.map((c) =>
         c._id === convo._id ? convo : c
@@ -244,9 +222,7 @@ const useStore = create((set, get) => ({
       set({ conversations: updated });
     });
 
-    // -----------------------------
-    //          user:created
-    // -----------------------------
+
     socket.on('user:created', () => {
       api
         .get('/api/users')
@@ -254,9 +230,7 @@ const useStore = create((set, get) => ({
         .catch(() => { });
     });
 
-    // -----------------------------
-    //        user online/offline
-    // -----------------------------
+
     socket.on('user:online', ({ userId }) => {
       set({
         users: get().users.map((u) =>
@@ -274,9 +248,7 @@ const useStore = create((set, get) => ({
     });
   },
 
-  // -----------------------------
-  //             auth
-  // -----------------------------
+
   login: async (username, password) => {
     try {
       const { data } = await api.post('/api/auth/login', {
@@ -342,13 +314,10 @@ const useStore = create((set, get) => ({
       banner: { type: 'success', text: 'Logged out' },
       unreadByConvo: {},
     });
-    // ensure socket is fully torn down and reference cleared
     disconnectSocket();
   },
 
-  // -----------------------------
-  //     יצירת שיחה חדשה
-  // -----------------------------
+
   createConversation: async (participantIds, isGroup = false, name = '') => {
     try {
       const { data } = await api.post('/api/conversations', {
@@ -385,9 +354,7 @@ const useStore = create((set, get) => ({
     }
   },
 
-  // -----------------------------
-  //         sendMessage
-  // -----------------------------
+
   sendMessage: async (conversationId, body, attachment) => {
     const me = get().me;
 
@@ -400,7 +367,6 @@ const useStore = create((set, get) => ({
       return;
     }
 
-    // הודעה אופטימית
     const tempId = `local-${Date.now()}`;
 
     const optimisticMsg = {

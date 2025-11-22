@@ -47,7 +47,6 @@ router.patch('/:id', authRequired, async (req,res)=>{
   if(!convo.participants.map(String).includes(req.user.id)) return res.status(403).json({ message:'not a participant' });
   convo.name = name || convo.name; await convo.save();
   const populated=await Conversation.findById(id).populate('participants','username displayName email isOnline');
-  // notify all participants about rename
   convo.participants.forEach(uid => req.io.to(`u:${uid}`).emit('conversation:updated', populated));
   res.json(populated);
 });

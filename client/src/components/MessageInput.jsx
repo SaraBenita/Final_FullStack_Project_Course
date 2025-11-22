@@ -18,10 +18,9 @@ export default function MessageInput() {
         if (file) {
             try {
                 const uploaded = await uploadFile(file);
-                attachment = uploaded; // { url, filename, mimeType, size }
+                attachment = uploaded; 
             } catch (err) {
                 console.error('Upload failed', err);
-                // optionally show banner
                 return;
             }
         }
