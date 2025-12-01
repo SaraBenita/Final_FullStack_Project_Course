@@ -85,6 +85,11 @@ docker compose down
 לאחר הרצה תקינה תראו בלוגים הודעות כמו:
 - `[MongoDB] connected: ...` — חיבור למסד נתונים הצליח.
 - `[Server] listening on 4000` — השרת מאזין.
+  
+6. להיכנס לדפדפן רגיל ובנוסף לדפדפן Incognito ולהוסיף יוזרים ולהתחיל לדבר בינהם:
+```powershell
+https://chatproject-azure.vercel.app/
+```
 
 ## מדוע Docker / Compose? יתרונות
 
