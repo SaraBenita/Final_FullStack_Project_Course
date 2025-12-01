@@ -1,4 +1,4 @@
-# Solid Chat — מדריך מקוצר והסבר
+# Chatico Chat — מדריך מקוצר והסבר
 
 ## סקירה כללית (Overview)
 
