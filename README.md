@@ -1,18 +1,69 @@
-# Solid Chat — הפעלת הפרויקט והסבר
+# Solid Chat — מדריך מקוצר והסבר
 
-מדריך קצר שמסביר איך להפעיל את השרת (Docker Compose), למה עטפנו את זה בקונטיינרים, איך לבדוק שהכול עובד, ושימוש עם ה‑client ב‑Vercel.
+## סקירה כללית (Overview)
 
-**מה יש בפרויקט**
-- `client/` — React (Vite) front-end, כבר פרוס ב‑Vercel בכתובת `https://chatproject-azure.vercel.app` (ה‑client קורא API דרך `VITE_API_BASE`).
-- `server/` — Node.js + Express + Socket.IO + Mongoose (MongoDB). מספק REST ו‑WebSocket ושירותי העלאה (uploads).
-- DB: MongoDB (אפשר Atlas או mongo מקומי בתוך `docker compose`).
+מטרה: יישום צ'אט מלא (SPA + backend) עם הודעות, קבוצות/שיחות, העלאת קבצים ותמיכה ב WebSockets (Socket.IO).
 
-**פקודות מהירות (PowerShell)**
-1. עברו לשרת:
+מה הוא עושה: משתמשים יכולים להירשם/להתחבר, ליצור/להצטרף לשיחות, לשלוח טקסט/קבצים בזמן אמת והודעות נשמרות ב MongoDB.
+
+## Technology Stack
+
+- Frontend: React (Vite) — UI מהיר, מודרני.
+- Backend: Node.js + Express — REST API, middleware, serving סטטי.
+- Realtime: Socket.IO — העברת הודעות בזמן אמת בין לקוחות.
+- DB: MongoDB (Mongoose) — מודל נתונים עבור Users, Conversations, Messages. תמיכה ב Atlas או Mongo מקומי דרך Docker Compose.
+- Uploads: multer — לטיפול בקבצי קלט (תמונות/קבצים).
+- Deployment / Local Dev: Docker + Docker Compose (מכולות ל server ו mongo).
+- אבטחה: JWT עבור אימות, helmet ל HTTP hardening, CORS מוסדר.
+
+## מבנה הפרויקט (Tree-level)
+
+- `client/` — אפליקציית React (Vite)
+    - `src/` — קומפוננטות UI, שירותי socket, `api.js` ל HTTP
+- `server/` — backend Node/Express
+    - `src/` — קוד המקור (routes, models, socket, middleware)
+    - `Dockerfile` — בניית תמונת ה server
+    - `docker-compose.yml` — הרצת `server` + `mongo` (אופציונלי)
+    - `.env` — משתנים (MONGO_URI, JWT_SECRET, CLIENT_ORIGIN, PORT)
+- `README.md` — מדריך והסברים
+
+## Server — קבצים חשובים ותפקידם
+
+- `server/src/index.js` — נקודת הכניסה: הגדרת middleware (helmet, cors, morgan), חיבור ל Mongo, static serving ל־`/uploads`, יצירת HTTP/Socket.IO server.
+- `server/src/config.js` — טעינת משתני סביבה וערכי ברירת מחדל.
+- `server/src/routes/auth.js` — `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me` — יצירת משתמשים, אימות והחזרת JWT.
+- `server/src/routes/messages.js` — ניהול הודעות (שליפה, יצירה), ו־`/api/messages/upload` עבור multer → שמירת קבצים ויצירת URL.
+- `server/src/models/User.js` — סכמת משתמש (username, email, passwordHash, displayName).
+- `server/src/models/Conversation.js` — סכמת שיחה/קבוצה (participants, lastMessageAt).
+- `server/src/models/Message.js` — סכמת הודעה (sender, body, attachment, createdAt, delivered/read).
+- `server/src/socket.js` — לוגיקת Socket.IO: אימות socket, broadcasters, event handlers (`message:send`, `user:typing`, וכו').
+- `server/Dockerfile` — בונה תמונה המיועדת לפריסה ב Compose/Production.
+- `server/docker-compose.yml` — תצורת Compose; מגדיר `mongo` ושירות `server`, volumes ל uploads ולנתוני mongo.
+
+## Client — קבצים חשובים ותפקידם
+
+- `client/src/main.jsx` — mount של היישום, התחברות ל store/socket.
+- `client/src/api.js` — axios wrapper, כולל `uploadFile(file)` לפנייה ל־`/api/messages/upload`.
+- `client/src/store.js` — ניהול state גלובלי, חיבור ל Socket.IO, פעולות לשליחת הודעות + optimistic updates.
+- `client/src/components/MessageInput.jsx` — UI לשליחת הודעה + קבצים (file input + upload flow).
+- `client/src/components/MessageList.jsx` — רינדור הודעות, הצגת attachments, הורדה/תצוגה.
+- `client/index.html`, `package.json`, `vite.config.js` — קונפיגורציית בנייה והרצה.
+
+## איך ה Flow עובד (פשוט)
+
+1. ה client שולח בקשת הרשמה/התחברות ל־`/api/auth` → השרת יוצר/מאמת משתמש ומחזיר JWT.
+2. ה client פותח חיבור Socket.IO עם token (אימות ב socket middleware).
+3. שליחת הודעה: ה client שולח או דרך REST (`POST /api/messages`) או דרך Socket.IO (`message:send`). השרת שומר את ההודעה ב Mongo ושולח `emit` למשתמשים אחרים בחדר.
+4. העלאת קובץ: ה client מבצע `POST /api/messages/upload` (multipart/form-data) → multer שומר את הקובץ ב־`/uploads` → השרת מחזיר URL לצפייה/הורדה; ה attachment נשמר בהודעה.
+5. קבצים סטטיים נגישים דרך `GET /uploads/:filename` (השרת מוסיף כותרות CORS מתאימות).
+
+## סביבה והרצה (פקודות מהירות)
+
+1. הכנסו לתיקיית השרת:
 ```powershell
 cd server
 ```
-2. בנו והריצו את השירותים (מיקום: `server/`):
+2. בנו והריצו עם Docker Compose:
 ```powershell
 docker compose --env-file .env up -d --build
 ```
@@ -26,99 +77,32 @@ docker compose ps
 ```powershell
 docker compose logs -f server
 ```
-
-לאחר הרצה תקינה תראו בלוגים הודעות כמו:
-- `[MongoDB] connected: ...` — חיבור למסד נתונים (Atlas או מקומי) הצליח
-- `[Server] listening on 4000` — השרת מאזין
-
-אם תרצו לעצור/להוריד את השירותים:
+5. להורדה/עצירה:
 ```powershell
 docker compose down
 ```
 
-מדוע עטפתי בקונטיינרים?
-- בידוד וסביבת הרצה עקבית: כל מי שיכול להריץ Docker יקבל את אותה גרסה של Node, תלותיות ועוד.
-- תצורה נוחה: Docker Compose מעלה את השרת ו‑Mongo ביחד, מגדיר רשת פנימית ו‑volumes.
-- פריסה פשוטה: קל לפרוס את התמונה שנבנתה על הענן או VM.
+לאחר הרצה תקינה תראו בלוגים הודעות כמו:
+- `[MongoDB] connected: ...` — חיבור למסד נתונים הצליח.
+- `[Server] listening on 4000` — השרת מאזין.
 
-הסבר על ה־Flow ותצורת ה‑network
-- Compose מגדיר שני שירותים עיקריים: `mongo` ו‑`server`.
-- השרת מתחבר ל‑Mongo לפי `MONGO_URI` (בקובץ `server/.env`). כאשר `MONGO_URI=mongodb://mongo:27017/chat_db` — השרת יתחבר ל‑mongo שבתוך Compose דרך שם השירות (`mongo`).
-- אם `MONGO_URI` הוא מסוג `mongodb+srv://...` — השרת מתחבר ל‑MongoDB Atlas בענן.
+## מדוע Docker / Compose? יתרונות
 
-חשוב על `CLIENT_ORIGIN` ו‑CORS
-- בכדי שה‑client ב‑Vercel יוכל לקרוא לפונקציות ה‑API, על השרת לאפשר CORS עבור הדומיין של ה‑client.
-- בקובץ `server/.env` יש את `CLIENT_ORIGIN=https://chatproject-azure.vercel.app` — ודאו שאין trailing slash.
-- אם אתם בודקים מה‑Vercel (או מ‑https), שימו לב להמנע מ‑mixed content: השרת צריך להיות נגיש ב‑https (לבדיקות ניתן להשתמש ב‑ngrok).
+- סביבה עקבית בין מפתחים ופרודקשן.
+- הרצה פשוטה של תלותיות (Mongo) בלי התקנה ידנית על המחשב.
+- יכולת לבודד שירותים ולפרוס תמונה מוכנה לענן או VPS.
 
-חשוב על upload files ו‑volumes
-- קבצים שמועלים נשמרים בתיקיית `uploads` בתיקיית `server/` על ה‑host וממופים לקונטיינר ב־`/app/uploads`.
-- ודאו שקיימת תיקיית `server/uploads` או הריצו `mkdir server\\uploads` לפני הרצה.
+## בדיקת DB
 
-נקודות מפתח בקוד (קבצים חשובים)
-- `server/src/index.js` — bootstrap של האפליקציה, הגדרת middleware (helmet, cors, morgan), static route ל־`/uploads`, חיבור ל‑Socket.IO.
-- `server/src/routes/auth.js` — `POST /api/auth/register` ו‑`POST /api/auth/login` (הרשמה/כניסה ומקבל/מחזיר token JWT).
-- `server/src/routes/messages.js` — CRUD להודעות, משולב `multer` על `/api/messages/upload` להעלאת קבצים.
-- `server/src/models/Message.js`, `User.js`, `Conversation.js` — סכמות Mongoose.
-- `server/Dockerfile` — הגדרת תמונת ה‑server.
-- `server/docker-compose.yml` — compose שמריץ `mongo` ו‑`server` יחד.
-- `server/.env` — משתנים פרטיים (MONGO_URI, JWT_SECRET, PORT, CLIENT_ORIGIN). **אסור לדחוף קובץ זה ל‑git**.
-
-מה עשינו בשינויים האחרונים (סיכום של מה שבוצע בפרויקט)
-- שינינו את שם בסיס הנתונים ברירת המחדל ל‑`chat_db` והעדכנו `MONGO_URI`.
-- החלפנו/יצרנו `JWT_SECRET` חזק בקובץ `.env`.
-- הוספנו תמיכה בהעלאת קבצים: endpoint `/api/messages/upload`, שמירת קבצים ל‑`/uploads`, הצגה וקישורים ל‑attachments בצד ה‑client.
-- הוספנו `server/Dockerfile` ו‑`server/docker-compose.yml` להרצה בתוך Docker Compose.
-- תיקנו בעיות CORS — השרת מנרמל origin ומחזיר את הכותרת הנכונה כאשר ה‑client מבקש (ניקוי trailing slash).
-- שינינו את מיפוי ה‑volume כך שה‑host folder `./uploads` ימופה ל‑`/app/uploads` בקונטיינר.
-
-איך להוסיף משתמשים / לבדוק את ה‑API
-- דרך ה‑UI (אם `VITE_API_BASE` ב‑Vercel מצביע לשרת נגיש): פתיחת היישום ב‑https://chatproject-azure.vercel.app והשתמשו בטופס ההרשמה.
-- דרך curl (מקומי):
-```powershell
-# Register
-curl -X POST http://localhost:4000/api/auth/register -H "Content-Type: application/json" -d '{"username":"sara","email":"sara@example.com","password":"secret123"}'
-
-# Login
-curl -X POST http://localhost:4000/api/auth/login -H "Content-Type: application/json" -d '{"username":"sara","password":"secret123"}'
-```
-- העלאת קובץ (upload) עם token:
-```powershell
-$TOKEN = "<PASTE_TOKEN_HERE>"
-curl -v -H "Authorization: Bearer $TOKEN" -F "file=@C:\path\to\test.jpg" http://localhost:4000/api/messages/upload
-```
-
-בדיקת DB
-- אם אתם משתמשים ב‑Atlas: התחברו ל‑MongoDB Atlas UI → Collections → `chat_db` → בדקו `users`, `conversations`, `messages`.
-- אם אתם משתמשים ב‑mongo מקומי בתוך compose:
+- אם משתמשים ב Atlas: התחברו ל MongoDB Atlas UI → Collections → `chat_db` → בדקו `users`, `conversations`, `messages`.
+- אם משתמשים במונגו מקומי בתוך compose:
 ```powershell
 docker compose exec mongo mongosh
 # בתוך mongosh
 use chat_db
 db.users.find().pretty()
-```
 
-פתרון בעיות נפוצות
-- `ECONNREFUSED 127.0.0.1:27017` — משמעות: השרת מנסה להתחבר ל‑127.0.0.1 (הקונטיינר עצמו) במקום לשירות `mongo`. הפתרון: בקובץ `.env` השתמשו ב‑`MONGO_URI=mongodb://mongo:27017/chat_db` כאשר מפעילים דרך Compose.
-- שגיאות CORS מהדפפן: בדקו `CLIENT_ORIGIN` ב‑`.env` (אין trailing slash) ודאו שהכותרת `Access-Control-Allow-Origin` תואמת בדיוק את ה‑Origin.
-- בעיות upload: ודאו שהתיקייה `server/uploads` קיימת ושהרשאות תקינות.
-
-הערות אבטחה ופרודקשן
-- לעולם לא לדחוף `server/.env` עם סיסמאות ל‑git.
-- בפרודקשן השתמשו ב‑secrets של הסביבה (לדוגמה: Vercel Environment Variables, Docker secrets, או תצורת CI/CD).
-- הציבו reverse proxy (nginx/Traefik) לקבלת TLS וקישוריות WebSocket נכונה.
-
-לסיכום — בדיקות מומלצות עכשיו
-1. ודאו תיקיית `server/uploads` קיימת (`mkdir server\\uploads`).
-2. מתוך `server/` הריצו:
-```powershell
-docker compose --env-file .env up -d --build
-```
-3. בדקו:
-```powershell
-docker ps
-docker compose logs -f server
-```
-4. אם תרצו שאבדוק איתכם את החיבור מה‑Vercel (E2E) — אפשר להריץ `ngrok http 4000` ולהגדיר `VITE_API_BASE` ב‑Vercel לכתובת ה‑ngrok (https) ולבצע בדיקת UI.
-
-אם תרצי, אני יכול להוסיף קטע קצר ב‑README עם הוראות פריסה ל‑VPS או העלאה ל‑Docker Hub / Server ב‑Cloud. רוצה שאוסיף את זה גם? 
+**מה יש בפרויקט**
+- `client/` — React (Vite) front-end, כבר פרוס ב Vercel בכתובת `https://chatproject-azure.vercel.app` (ה client קורא API דרך `VITE_API_BASE`).
+- `server/` — Node.js + Express + Socket.IO + Mongoose (MongoDB). מספק REST ו WebSocket ושירותי העלאה (uploads).
+- DB: MongoDB (אפשר Atlas או mongo מקומי בתוך `docker compose`).
