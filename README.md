@@ -1,6 +1,6 @@
 # Solid Chat — הפעלת הפרויקט והסבר
 
-מדריך קצר בעברית שמסביר איך להפעיל את השרת (Docker Compose), למה עטפנו את זה בקונטיינרים, איך לבדוק שהכול עובד, ושימוש עם ה‑client ב‑Vercel.
+מדריך קצר שמסביר איך להפעיל את השרת (Docker Compose), למה עטפנו את זה בקונטיינרים, איך לבדוק שהכול עובד, ושימוש עם ה‑client ב‑Vercel.
 
 **מה יש בפרויקט**
 - `client/` — React (Vite) front-end, כבר פרוס ב‑Vercel בכתובת `https://chatproject-azure.vercel.app` (ה‑client קורא API דרך `VITE_API_BASE`).
