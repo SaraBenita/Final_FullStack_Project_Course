@@ -291,4 +291,7 @@ docker compose down
 - שימוש ב-Docker ו-Docker Compose לניהול סביבה.  
 - ניהול קבצים וצירופם להודעות.  
 
-ניתן להרחיב את המערכת בקלות: הוספת סטטוסים, נראות (online/offline), הודעות קוליות ועוד.
+## 📷 תצלומי מסך (Screenshots)
+
+לנוחותכם, מצורף קובץ בשם **Screenshots_app.docx** הכולל  
+תמונות מסך מהאפליקציה, כדי שתוכלו להתרשם מהממשק ומהפונקציונליות של Chatico Chat.
