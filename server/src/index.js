@@ -35,8 +35,6 @@ app.use('/api/messages', msgRoutes);
 const uploadsPath = path.join(process.cwd(), 'uploads');
 const CLIENT_ORIGIN = (process.env.CLIENT_ORIGIN || 'http://localhost:5173').replace(/\/$/, '');
 app.use('/uploads', (req, res, next) => {
-  // Use the request Origin if present and it matches the configured client origin (after normalizing),
-  // otherwise fall back to the configured CLIENT_ORIGIN. This avoids mismatches caused by trailing slashes.
   const reqOrigin = (req.get('Origin') || '').replace(/\/$/, '');
   const allowOrigin = reqOrigin && reqOrigin === CLIENT_ORIGIN ? reqOrigin : CLIENT_ORIGIN;
   res.setHeader('Access-Control-Allow-Origin', allowOrigin);
