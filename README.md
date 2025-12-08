@@ -1,70 +1,294 @@
-Chatico Chat — מדריך מקוצר והסבר
-סקירה כללית (Overview)
-מטרה: יישום צ'אט מלא (SPA + backend) עם הודעות, קבוצות/שיחות, העלאת קבצים ותמיכה ב WebSockets (Socket.IO).
+# 📌 Chatico Chat – תיעוד הפרויקט
 
-מה הוא עושה: משתמשים יכולים להירשם/להתחבר, ליצור/להצטרף לשיחות, לשלוח טקסט/קבצים בזמן אמת והודעות נשמרות ב MongoDB.
+יישום צ'אט מלא (Full-Stack) הכולל SPA בצד לקוח + שרת Node.js, עם תמיכה בהודעות בזמן אמת, קבוצות, העלאת קבצים ו-WebSockets (Socket.IO).
 
-Technology Stack
-Frontend: React (Vite) — UI מהיר, מודרני.
-Backend: Node.js + Express — REST API, middleware, serving סטטי.
-Realtime: Socket.IO — העברת הודעות בזמן אמת בין לקוחות.
-DB: MongoDB (Mongoose) — מודל נתונים עבור Users, Conversations, Messages. תמיכה ב Atlas או Mongo מקומי דרך Docker Compose.
-Uploads: multer — לטיפול בקבצי קלט (תמונות/קבצים).
-Deployment / Local Dev: Docker + Docker Compose (מכולות ל server ו mongo).
-אבטחה: JWT עבור אימות, helmet ל HTTP hardening, CORS מוסדר.
-מבנה הפרויקט (Tree-level)
-client/ — אפליקציית React (Vite)
-src/ — קומפוננטות UI, שירותי socket, api.js ל HTTP
-server/ — backend Node/Express
-src/ — קוד המקור (routes, models, socket, middleware)
-Dockerfile — בניית תמונת ה server
-docker-compose.yml — הרצת server + mongo (אופציונלי)
-.env — משתנים (MONGO_URI, JWT_SECRET, CLIENT_ORIGIN, PORT)
-README.md — מדריך והסברים
-Server — קבצים חשובים ותפקידם
-server/src/index.js — נקודת הכניסה: הגדרת middleware (helmet, cors, morgan), חיבור ל Mongo, static serving ל־/uploads, יצירת HTTP/Socket.IO server.
-server/src/config.js — טעינת משתני סביבה וערכי ברירת מחדל.
-server/src/routes/auth.js — POST /api/auth/register, POST /api/auth/login, GET /api/auth/me — יצירת משתמשים, אימות והחזרת JWT.
-server/src/routes/messages.js — ניהול הודעות (שליפה, יצירה), ו־/api/messages/upload עבור multer → שמירת קבצים ויצירת URL.
-server/src/models/User.js — סכמת משתמש (username, email, passwordHash, displayName).
-server/src/models/Conversation.js — סכמת שיחה/קבוצה (participants, lastMessageAt).
-server/src/models/Message.js — סכמת הודעה (sender, body, attachment, createdAt, delivered/read).
-server/src/socket.js — לוגיקת Socket.IO: אימות socket, broadcasters, event handlers (message:send, user:typing, וכו').
-server/Dockerfile — בונה תמונה המיועדת לפריסה ב Compose/Production.
-server/docker-compose.yml — תצורת Compose; מגדיר mongo ושירות server, volumes ל uploads ולנתוני mongo.
-Client — קבצים חשובים ותפקידם
-client/src/main.jsx — mount של היישום, התחברות ל store/socket.
-client/src/api.js — axios wrapper, כולל uploadFile(file) לפנייה ל־/api/messages/upload.
-client/src/store.js — ניהול state גלובלי, חיבור ל Socket.IO, פעולות לשליחת הודעות + optimistic updates.
-client/src/components/MessageInput.jsx — UI לשליחת הודעה + קבצים (file input + upload flow).
-client/src/components/MessageList.jsx — רינדור הודעות, הצגת attachments, הורדה/תצוגה.
-client/index.html, package.json, vite.config.js — קונפיגורציית בנייה והרצה.
-איך ה Flow עובד (פשוט)
-ה client שולח בקשת הרשמה/התחברות ל־/api/auth → השרת יוצר/מאמת משתמש ומחזיר JWT.
-ה client פותח חיבור Socket.IO עם token (אימות ב socket middleware).
-שליחת הודעה: ה client שולח או דרך REST (POST /api/messages) או דרך Socket.IO (message:send). השרת שומר את ההודעה ב Mongo ושולח emit למשתמשים אחרים בחדר.
-העלאת קובץ: ה client מבצע POST /api/messages/upload (multipart/form-data) → multer שומר את הקובץ ב־/uploads → השרת מחזיר URL לצפייה/הורדה; ה attachment נשמר בהודעה.
-קבצים סטטיים נגישים דרך GET /uploads/:filename (השרת מוסיף כותרות CORS מתאימות).
-סביבה והרצה (פקודות מהירות)
-הכנסו לתיקיית השרת:
+---
+
+## 🚀 סקירה כללית (Overview)
+
+**מה המערכת עושה?**
+
+- הרשמה והתחברות משתמשים  
+- יצירת שיחות פרטיות וקבוצתיות  
+- שליחת הודעות טקסט וקבצים בזמן אמת  
+- שמירת נתונים ב-MongoDB  
+- עדכוני Live באמצעות Socket.IO  
+
+**מטרת הפרויקט:**  
+להדגים בניית אפליקציית צ'אט מודרנית, מהירה, וידידותית לפריסה באמצעות Docker ו-Docker Compose.
+
+---
+
+## 🏗️ ארכיטקטורת המערכת
+
+```mermaid
+graph TD
+    A["Client - Browser (Production)"] --> B["Vercel - React (Vite) App"]
+    B --> C["Backend - Node.js + Express + Socket.IO (Docker Container)"]
+    C --> D["MongoDB (Docker Container)"]
+    C --> E["Uploads Folder (Docker Volume)"]
+```
+
+**הסבר קצר:**
+
+- המשתמש ניגש ל־Frontend שמאוחסן ב־Vercel.  
+- ה-Frontend מתקשר עם ה־Backend דרך REST API ו-Socket.IO.  
+- ה-Backend מתקשר עם MongoDB (ב-Container נפרד).  
+- קבצים (attachments) נשמרים בתיקיית `uploads` המשויכת ל-Volume.
+
+---
+
+## 🧰 טכנולוגיות עיקריות
+
+### Frontend
+
+- React (Vite) – אפליקציה חד-עמודית (SPA) מודרנית ומהירה.  
+
+### Backend
+
+- Node.js + Express – REST API, Middleware, Static Files.  
+- Socket.IO – תקשורת בזמן אמת (Real-Time Messaging).  
+- MongoDB + Mongoose – מודלים ל־Users, Conversations, Messages.  
+- Multer – טיפול בהעלאת קבצים (תמונות/קבצים).  
+
+### DevOps / אבטחה
+
+- Docker + Docker Compose – הרצת server + mongo בסביבות מבודדות.  
+- JWT – אימות משתמשים.  
+- Helmet – הקשחת HTTP headers.  
+- CORS – הגדרת מקורות מותרים ל-Frontend.
+
+---
+
+## 📁 מבנה הפרויקט (Project Structure)
+
+```bash
+client/                      # אפליקציית React (Vite)
+  src/
+    components/              # קומפוננטות UI
+    store.js                 # ניהול state גלובלי + Socket.IO client
+    api.js                   # axios wrapper, קריאות לשרת
+    main.jsx                 # נקודת כניסה לאפליקציה
+
+server/                      # Backend (Node.js + Express + Socket.IO)
+  src/
+    routes/
+      auth.js                # מסלולי הרשמה/התחברות/משתמש נוכחי
+      messages.js            # מסלולי הודעות + העלאת קבצים
+    models/
+      User.js                # מודל משתמש
+      Conversation.js        # מודל שיחה/קבוצה
+      Message.js             # מודל הודעה
+    socket.js                # לוגיקת Socket.IO
+    config.js                # קריאת ENV וערכי ברירת מחדל
+    index.js                 # נקודת כניסה לשרת
+  Dockerfile                 # בניית תמונת Docker לשרת
+
+docker-compose.yml           # הגדרת שירותים: server + mongo + volumes
+.env.example                 # דוגמת משתני סביבה
+README.md                    # תיעוד הפרויקט (קובץ זה)
+```
+
+---
+
+## 🖥️ קבצים חשובים – Server
+
+- `server/src/index.js`  
+  נקודת הכניסה לשרת:  
+  - חיבור ל-MongoDB  
+  - הגדרת Middleware (helmet, cors, morgan וכו’)  
+  - הגדרת static folder ל־`/uploads`  
+  - יצירת HTTP server + Socket.IO server  
+
+- `server/src/config.js`  
+  קריאת משתני סביבה (`process.env`) והגדרת ערכי ברירת מחדל.
+
+- `server/src/routes/auth.js`  
+  מסלולים:
+  - `POST /api/auth/register` – יצירת משתמש חדש  
+  - `POST /api/auth/login` – התחברות והחזרת JWT  
+  - `GET /api/auth/me` – החזרת פרטי המשתמש לפי ה-JWT  
+
+- `server/src/routes/messages.js`  
+  - יצירה ושליפה של הודעות  
+  - `POST /api/messages/upload` – העלאת קבצים עם Multer ושמירת URL  
+
+- `server/src/models/User.js`  
+  סכמת משתמש: `username`, `email`, `passwordHash`, `displayName` וכו’.
+
+- `server/src/models/Conversation.js`  
+  סכמת שיחה/קבוצה: `participants`, `lastMessageAt` וכו’.
+
+- `server/src/models/Message.js`  
+  סכמת הודעה: `sender`, `body`, `attachment`, `createdAt`, `delivered`, `read` וכו’.
+
+- `server/src/socket.js`  
+  - אימות Socket לפי JWT  
+  - הצטרפות לחדרי שיחה  
+  - האזנה ל־events כגון: `message:send`, `user:typing` וכו’  
+  - שידור הודעות ומשתמשים typing לשאר הלקוחות בחדר.
+
+- `server/Dockerfile`  
+  בניית תמונת Docker עבור השרת – מיועדת ל-Compose/Production.
+
+---
+
+## 🎨 קבצים חשובים – Client
+
+- `client/src/main.jsx`  
+  Mount של האפליקציה, חיבור ל-store ול-socket.
+
+- `client/src/api.js`  
+  Wrapper מעל axios כולל פונקציות לגישה ל-REST API ול-upload קבצים (`/api/messages/upload`).
+
+- `client/src/store.js`  
+  ניהול state גלובלי, חיבור ל-Socket.IO, שליחת הודעות, עדכוני UI (כולל optimistic updates).
+
+- `client/src/components/MessageInput.jsx`  
+  קומפוננטת UI להזנת טקסט, בחירת קבצים ושליחת הודעות.
+
+- `client/src/components/MessageList.jsx`  
+  הצגת רשימת הודעות, טקסט + attachments, אפשרות לצפייה/הורדה של קבצים.
+
+---
+
+## 🔄 Flow בסיסי של המערכת
+
+1. **הרשמה/התחברות**  
+   הלקוח שולח בקשות ל־`/api/auth/*`.  
+   השרת יוצר/מאמת משתמש ומחזיר JWT.
+
+2. **פתיחת Socket.IO**  
+   הלקוח פותח חיבור Socket.IO עם ה-JWT לצורך אימות.  
+
+3. **שליחת הודעה**  
+   - דרך REST: `POST /api/messages`  
+   - או דרך Socket.IO: event מסוג `message:send`  
+   השרת שומר את ההודעה ב-Mongo ומשדר אותה למשתמשים הרלוונטיים בחדר.
+
+4. **העלאת קובץ**  
+   - הלקוח מבצע `POST /api/messages/upload` עם `multipart/form-data`.  
+   - Multer שומר את הקובץ בתיקיית `uploads`.  
+   - השרת מחזיר URL לצפייה/הורדה, וה-URL נשמר כחלק מההודעה.
+
+5. **גישה לקבצים**  
+   - קבצים סטטיים זמינים דרך `GET /uploads/:filename` עם כותרות CORS מתאימות.
+
+---
+
+## 🔐 משתני סביבה (Environment Variables)
+
+הקובץ `.env.example` מכיל דוגמאות. יש להעתיק אותו ל־`.env` ולמלא ערכים:
+
+```env
+# -------------------------------------------------------
+# MongoDB connection string (Atlas or local)
+# Example (Atlas):
+# MONGO_URI=mongodb+srv://<user>:<password>@cluster0.xxxx.mongodb.net/myDatabase
+# Example (Local):
+# MONGO_URI=mongodb://localhost:27017/myDatabase
+MONGO_URI=
+
+# -------------------------------------------------------
+# Secret key used to sign and verify JWT tokens.
+# Generate a secure secret with:
+#   openssl rand -hex 32
+JWT_SECRET=
+
+# -------------------------------------------------------
+# Port on which the server will run (e.g. 4000)
+PORT=
+
+# -------------------------------------------------------
+# The origin (URL) of the client application (frontend) allowed by CORS.
+# Production example:
+# CLIENT_ORIGIN=https://chatproject-azure.vercel.app
+CLIENT_ORIGIN=
+```
+
+## ⚙️ התקנה והרצה מקומית
+
+### 1️⃣ כניסה לתיקיית השרת
+
+```bash
 cd server
-בנו והריצו עם Docker Compose:
-docker compose --env-file .env up -d --build
-בדקו קונטיינרים שרצים:
-docker ps
-# או
-docker compose ps
-צפו בלוגים של השרת בזמן אמת:
-docker compose logs -f server
-להורדה/עצירה:
-docker compose down
-לאחר הרצה תקינה תראו בלוגים הודעות כמו:
+```
 
-[MongoDB] connected: ... — חיבור למסד נתונים הצליח.
-[Server] listening on 4000 — השרת מאזין.
-להיכנס לדפדפן רגיל ובנוסף לדפדפן Incognito ולהוסיף יוזרים ולהתחיל לדבר בינהם:
-https://chatproject-azure.vercel.app/
-מדוע Docker / Compose? יתרונות
-סביבה עקבית בין מפתחים ופרודקשן.
-הרצה פשוטה של תלותיות (Mongo) בלי התקנה ידנית על המחשב.
-יכולת לבודד שירותים ולפרוס תמונה מוכנה לענן או VPS.
+### 2️⃣ יצירת קובץ `.env` מתוך `.env.example`
+
+```bash
+cp .env.example .env
+```
+
+מלאו את הערכים בקובץ `.env` לפי ההסברים למעלה.
+
+### 3️⃣ התקנת תלויות
+
+```bash
+npm install
+```
+
+### 4️⃣ בנייה והרצה עם Docker Compose
+
+```bash
+docker compose --env-file .env up -d --build
+```
+
+### 5️⃣ בדיקת קונטיינרים רצים
+
+```bash
+docker compose ps
+```
+
+### 6️⃣ צפייה בלוגים של השרת
+
+```bash
+docker compose logs -f server
+```
+
+### 7️⃣ עצירה/הורדת הקונטיינרים
+
+```bash
+docker compose down
+```
+
+---
+
+## 🧪 בדיקות בסיסיות
+
+לאחר הרצה תקינה, בלוגים אמורות להופיע הודעות כגון:
+
+```text
+[MongoDB] connected: ...
+[Server] listening on 4000
+```
+
+כדי לבדוק את היישום:
+
+1. פתחו את כתובת ה-Frontend (Production):  
+   `https://chatproject-azure.vercel.app/`
+2. פתחו דפדפן רגיל ועוד חלון Incognito.  
+3. הירשמו עם שני משתמשים שונים.  
+4. התחילו לשלוח הודעות ביניהם ולוודא שהן מופיעות בזמן אמת.
+
+---
+
+## 🐳 למה Docker / Docker Compose?
+
+- סביבה עקבית בין מפתחים שונים.  
+- אין צורך להתקין MongoDB על המחשב המקומי – הכל בתוך Containers.  
+- הפרדה ברורה בין שירותים: Server, Database, Volumes.  
+- מתאים לפריסה לשרתים בענן או ל-VPS בצורה פשוטה.  
+
+---
+
+## ✅ סיכום
+
+הפרויקט מדגים:
+
+- ארכיטקטורת Full-Stack מודרנית לצ'אט בזמן אמת.  
+- שימוש ב-WebSockets (Socket.IO) + REST במקביל.  
+- שימוש ב-Docker ו-Docker Compose לניהול סביבה.  
+- ניהול קבצים וצירופם להודעות.  
+
+ניתן להרחיב את המערכת בקלות: הוספת סטטוסים, נראות (online/offline), הודעות קוליות ועוד.

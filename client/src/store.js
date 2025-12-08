@@ -38,7 +38,6 @@ const useStore = create((set, get) => ({
       const { data } = await api.get(`/api/messages/${id}`);
       set({ messages: data });
 
-      // סימון כנקראו בצד השרת
       const myId = get().me?.id;
       const unread = data
         .filter(
