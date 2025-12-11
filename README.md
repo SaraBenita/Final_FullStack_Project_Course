@@ -231,6 +231,7 @@ npm install
 ### 4️⃣ בנייה והרצה עם Docker Compose
 
 ```bash
+open Docker Desktop
 docker compose --env-file .env up -d --build
 ```
 
@@ -246,7 +247,7 @@ docker compose ps
 docker compose logs -f server
 ```
 
-### 7️⃣ עצירה/הורדת הקונטיינרים
+### (בסוף) 7️⃣ עצירה/הורדת הקונטיינרים
 
 ```bash
 docker compose down
